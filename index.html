@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>Cards Piece - God Edition</title>
+<style>
+/* Redução global de escala para diminuir o visual do jogo */
+    html {
+        zoom: 2; /* Zoom para navegadores compatíveis */
+        -moz-transform: scale(0.7); /* Suporte para Firefox */
+        -moz-transform-origin: 0 0;
+    }
+    
+    body{
+        font-family:Arial, sans-serif;
+        text-align:center;
+        color:#fff;
+        margin:0;
+        background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center fixed;
+        background-size: cover;
+        min-height: 100vh; 
+        overflow-x: hidden;
+        padding-bottom: 250px; 
+    }
+
+    #controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: rgba(15, 32, 39, 0.9); 
+        border-top: 2px solid gold;
+        padding: 15px 0;
+        z-index: 1000;
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.5);
+    }
+
+    button{padding:10px;margin:5px;border-radius:8px;border:none;cursor:pointer; font-weight: bold; transition: 0.2s;}
+    button:active{transform: scale(0.95);}
+    .primary{background:gold; color: #000;}
+    .nav-btn{background: #444; color: white; padding: 12px 25px; font-size: 16px;}
+    .nav-btn.active{background: #27ae60;}
+    
+    .auto-btn { background: #e67e22; color: white; border: 2px solid #d35400; }
+    @keyframes pulse-green { 0% {box-shadow: 0 0 0 0 rgba(46, 204, 113, 0.7);} 70% {box-shadow: 0 0 0 15px rgba(46, 204, 113, 0);} 100% {box-shadow: 0 0 0 0 rgba(46, 204, 113, 0);} }
+
+    #startScreen {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.6); 
+        backdrop-filter: blur(5px);
+        display: flex; flex-direction: column;
+        justify-content: center; align-items: center;
+        z-index: 2000; transition: opacity 0.5s ease;
+    }
+    #startScreen h1 {
+        position: absolute; top: 10%; font-size: 60px; color: gold;
+        text-shadow: 0 0 20px rgba(255,215,0,0.7); margin: 0;
+    }
+    #startScreen .play-btn {
+        padding: 20px 60px; font-size: 24px;
+        background: #27ae60; color: white;
+        border-radius: 50px; border: 2px solid #fff;
+        transition: 0.3s; cursor: pointer;
+    }
+    #startScreen .play-btn:hover { transform: scale(1.1); background: #2ecc71; }
+    #startScreen .credits { position: absolute; bottom: 20px; right: 20px; font-size: 14px; opacity: 0.7; }
+
+    #mythicOverlay, #godOverlay {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85); display: none;
+        justify-content: center; align-items: center; z-index: 5000;
+        cursor: pointer;
+    }
+    #mythicOverlay h1 { font-size: 80px; color: red; text-shadow: 0 0 20px red; animation: pulse 1s infinite; }
+    #godOverlay h1 { font-size: 90px; color: #00ffff; text-shadow: 0 0 30px #00ffff; animation: pulse 0.8s infinite; }
+    
+    @keyframes pulse { 0% {transform: scale(1);} 50% {transform: scale(1.1);} 100% {transform: scale(1);} }
+
+    #moneyDisplay { 
+        font-size: 48px; 
+        font-weight: bold; 
+        color: rgba(255, 215, 0, 0.9); 
+        text-shadow: 2px 2px 10px rgba(0,0,0,0.5); 
+        background: rgba(0,0,0,0.7); 
+        display: inline-block; 
+        padding: 10px 40px; 
+        border-radius: 20px;
+        z-index: 4000; 
+        pointer-events: none;
+        transition: transform 0.2s, box-shadow 0.3s;
+        border: 2px solid gold;
+        position: sticky;
+        top: 10px; 
+        margin: 10px 0;
+    }
+    
+    .boost-active { border-color: #ff4757 !important; color: #ff4757 !important; text-shadow: 0 0 15px #ff4757 !important; }
+
+    #statsDisplay { font-size: 14px; color: #fff; margin-bottom: 5px; background: rgba(0,0,0,0.4); display: inline-block; padding: 5px 15px; border-radius: 10px; }
+
+    .cards, .inventory-group, .index-group {
+        display: flex; flex-wrap: wrap; justify-content: center;
+        gap: 12px; margin: 15px auto; max-width: 700px;
+    }
+
+    .card{width:120px; height:170px; perspective:800px; position:relative; font-size: 14px; box-sizing: border-box;}
+    .inner{ width:100%; height:100%; transform-style:preserve-3d; transition:transform 0.7s; position:relative; }
+    .card.flip .inner{transform:rotateY(180deg);}
+    
+    .front,.back{ 
+        position:absolute; width:100%; height:100%; backface-visibility:hidden; 
+        border-radius:10px; display:flex; flex-direction:column; justify-content:center; 
+        align-items:center; 
+        background-color: #a67c52;
+        background-image: repeating-linear-gradient(45deg, rgba(255,255,255, 0.05) 0px, rgba(255,255,255, 0.05) 2px,transparent 2px, transparent 4px), linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(0,0,0,0.3) 100%);
+        padding: 8px; box-sizing: border-box; 
+        box-shadow: inset 0 0 15px rgba(0,0,0,0.5);
+    }
+    
+    .back h3 { font-size: 14px; margin: 6px 0; color: #fff; text-shadow: 1px 1px 2px #000; }
+    .back p { font-size: 12px; margin: 3px 0; color: #fff; text-shadow: 1px 1px 2px #000; }
+    .front { background: #333; color: gold; font-size: 40px; border: 3px solid gold;}
+
+    .back{transform:rotateY(180deg);}
+
+    .common{border:3px solid gray;}
+    .uncommon{border:3px solid #2ecc71;}
+    .rare{border:3px solid blue;}
+    .epic{border:3px solid purple;}
+    .legendary{border:3px solid gold;}
+    .mythic{border:3px solid red;}
+    .god{border:3.5px solid #00ffff; box-shadow: 0 0 15px #00ffff; background-color: #001a1a !important;}
+
+    .locked { filter: brightness(0.2); opacity: 0.5; border: 2px dashed #444; }
+    
+    .index-card { 
+        width: 100px; height: 140px; font-size: 12px; border-radius: 10px; 
+        display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+        background-color: #a67c52;
+        padding: 8px; box-sizing: border-box; transition: 0.3s;
+        position: relative;
+    }
+
+    .page { display: none; padding: 20px; position: relative; }
+    .page.active { display: block; }
+
+    #btnReset { background: #e74c3c; color: white; padding: 10px 20px; }
+
+    .legendary-glow{ animation:legendaryPulse 1.2s ease; box-shadow:0 0 15px gold; }
+    @keyframes legendaryPulse{ 0%{transform:scale(0.8);filter:brightness(2);} 50%{transform:scale(1.2);filter:brightness(3);} 100%{transform:scale(1);} }
+    
+    .mythic-glow{ animation:mythicExplosion 1.2s ease; }
+    @keyframes mythicExplosion{ 0%{transform:scale(0.3);filter:brightness(5);} 50%{transform:scale(1.3);filter:brightness(4);} 100%{transform:scale(1);} }
+
+    .god-glow{ animation:godExplosion 1.5s ease; box-shadow: 0 0 30px #00ffff; }
+    @keyframes godExplosion{ 0%{transform:scale(0.2); filter:hue-rotate(0deg) brightness(5);} 50%{transform:scale(1.4); filter:hue-rotate(180deg) brightness(4);} 100%{transform:scale(1);} }
+
+    .sold {
+        opacity: 0.9; background: #222 !important; border-radius: 10px;
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+    }
+    .sold::after {
+        content: attr(data-name) "\A\A" attr(data-rarity) "\A\A Vendido por " attr(data-price);
+        position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+        font-size:12px; font-weight:bold; text-align:center; white-space:pre-line;
+        text-shadow: 0 0 5px #000; z-index: 2; width: 90%;
+    }
+
+    h1, h3, h4, p {
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+    }
+
+    /* Modal Config */
+    #settingsModal {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(15, 32, 39, 0.95);
+        padding: 30px;
+        border-radius: 15px;
+        border: 2px solid gold;
+        z-index: 6000;
+        box-shadow: 0 0 30px rgba(0,0,0,0.8);
+        min-width: 250px;
+    }
+    
+    /* ESTILO BATALHA */
+    #battleArena {
+        background: rgba(0,0,0,0.8);
+        border: 3px solid #e74c3c;
+        border-radius: 20px;
+        padding: 20px;
+        margin: 20px auto;
+        max-width: 900px;
+    }
+    .battle-row {
+        display: flex;
+        justify-content: space-around;
+        margin: 20px 0;
+        min-height: 180px;
+    }
+    .selected-card { border: 4px solid #2ecc71 !important; transform: scale(1.05); }
+    #battleLog {
+        background: #222;
+        padding: 10px;
+        border-radius: 10px;
+        height: 100px;
+        overflow-y: auto;
+        font-family: monospace;
+        color: #2ecc71;
+        margin-top: 10px;
+        text-align: left;
+    }
+</style>
+</head>
+<body>
+
+    <div id="mythicOverlay" onclick="this.style.display='none'">
+        <h1>🔥MÍTICA🔥</h1>
+    </div>
+
+    <div id="godOverlay" onclick="this.style.display='none'">
+        <h1>✨DIVINDADE✨</h1>
+    </div>
+
+    <div id="settingsModal">
+        <h2 style="color: gold; margin-top: 0;">Configurações</h2>
+        <div style="margin: 20px 0; text-align: left;">
+            <label style="font-size: 18px; cursor: pointer;">
+                <input type="checkbox" id="toggleMusic" checked onchange="toggleMusicStatus()"> 🎵 Música de Fundo
+            </label>
+        </div>
+        <button class="primary" onclick="closeSettings()" style="width: 100%;">Fechar</button>
+    </div>
+
+    <div id="startScreen">
+        <h1>🏴‍☠️ Cards Piece</h1>
+        <button class="play-btn" onclick="startGame()">JOGAR</button>
+        <div class="credits">ㅤDiandra L.A.AlonsoㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤㅤDinean J.A.Alonso</div>
+    </div>
+
+    <nav id="gameNav" style="margin-top: 20px; display:none; position: relative; z-index: 3000;">
+        <button id="btnGame" class="nav-btn active" onclick="showPage('game')">🎮 Jogo</button>
+        <button id="btnQuests" class="nav-btn" onclick="showPage('quests'); renderQuests();">🎯 Missões</button>
+        <button id="btnIndex" class="nav-btn" onclick="showPage('index')">📖 Index</button>
+    </nav>
+
+    <div id="pageGame" class="page">
+        <button onclick="openSettings()" style="background: #555; color: white; position: fixed; top: 20px; right: 20px; z-index: 4500;">⚙️ Configs</button>
+
+        <h1>🏴‍☠️ Cards Piece</h1>
+        <div id="moneyDisplay">💰 <span id="money">50</span></div>
+        <br>
+        <div id="statsDisplay">Ganho: <span id="incomeVal">5</span>/s | Próximo Reset: <span id="resetCostVal">500</span></div>
+        <br>
+        <div id="boostDisplay" style="display:none; font-size: 14px; color: #ff4757; font-weight: bold; background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 10px; margin-bottom: 10px; border: 1px solid #ff4757;">🚀 Boost Ativo: <span id="boostTimeLeft">0</span>s</div>
+
+        <h3>📦 Pack Recém Aberto</h3>
+        <div class="cards" id="cards"></div>
+
+        <hr style="border: 0.5px solid rgba(255,255,255,0.1); margin: 20px 0;">
+
+        <div id="controls">
+            <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 10px;">
+                <button class="primary" onclick="playClick();soundPack();openMultiple(1)">Abrir Pacote (100)</button>
+                <button class="primary" onclick="playClick();soundPack();openMultiple(5)">Abrir 5 Pacotes (500)</button>
+            </div>
+            
+            <div style="display: inline-block; vertical-align: middle;">
+                <button id="btnAutoSpin" class="auto-btn" onclick="buyOrToggleAutoSpin()">🔄 Giro Automático (5000) </button>
+                <select id="autoSpinAmount" style="padding: 10px; border-radius: 8px; font-weight: bold;" onchange="playClick()">
+                    <option value="1">1 por vez</option>
+                    <option value="5" selected>5 por vez</option>
+                </select>
+            </div>
+
+            <button id="btnReset" onclick="resetGame()">♻️ Resetar </button>
+            <button onclick="playClick();toggleSkip()">⏩ Skip: <span id="skipStatus">OFF</span></button>
+
+            <div style="margin-top: 10px; font-size: 14px;">
+                <b>Auto vender:</b>
+                <label><input type="checkbox" id="auto_common" onchange="toggleAuto('common')"> Comum</label>
+                <label><input type="checkbox" id="auto_uncommon" onchange="toggleAuto('uncommon')"> Incomum</label>
+                <label><input type="checkbox" id="auto_rare" onchange="toggleAuto('rare')"> Raro</label>
+                <label><input type="checkbox" id="auto_epic" onchange="toggleAuto('epic')"> Épico</label>
+                <label><input type="checkbox" id="auto_legendary" onchange="toggleAuto('legendary')"> Lendária</label>
+                <label><input type="checkbox" id="auto_mythic" onchange="toggleAuto('mythic')"> Mítica</label>
+            </div>
+        </div>
+
+        <h3>🎒 Inventário</h3>
+        <div id="inventory"></div>
+    </div>
+
+    <!-- PÁGINA DE MISSÕES -->
+    <div id="pageQuests" class="page">
+        <h1>🎯 Missões de Pirata</h1>
+        <p>Novas missões surgem aleatoriamente a cada reset!</p>
+        <div id="questResetDisplay" style="display:none; color: #3498db; font-size: 16px; font-weight: bold; margin-bottom: 15px; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 8px; border: 1px solid #3498db;">⏳ Todas as missões completas! Novas em: <span id="questResetTimeLeft">0</span></div>
+        <div id="questsContainer" style="max-width: 600px; margin: 0 auto; text-align: left; padding-bottom: 300px;"></div>
+    </div>
+
+    <div id="pageIndex" class="page">
+        <h1>📖 Coleção de Lendas</h1>
+        <p>Progresso Total: <span id="unlockedCount">0</span> / 105</p>
+        <p style="color: #00ffff; font-weight: bold; font-size: 18px; text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);">✨ Multiplicador de Sorte: <span id="luckDisplay">1x</span></p>
+        <div id="indexContainer"></div>
+    </div>
+
+<script>
+let audioCtx;
+let money = 100; 
+let inventory = {};
+let unlockedCards = new Set();
+let lockedIndexCards = new Set();
+let autoSell = {common:false, uncommon:false, rare:false, epic:false, legendary:false, mythic:false};
+let skipAnimation = false;
+let gameStarted = false;
+let hasAutoSpin = false;
+let autoSpinActive = false;
+let autoSpinTimer = null;
+const AUTO_SPIN_COST = 5000;
+
+// Ganhos e Boost
+let baseIncome = 5;
+let incomeMultiplier = 1;
+let currentResetPrice = 500;
+let boostEndTime = 0;
+let questResetEndTime = 0;
+
+// SISTEMA DE MISSÕES ALEATÓRIAS
+let stats = { packs: 0, legendaries: 0, sold: 0, spent: 0, mythics: 0 };
+let quests = [];
+
+// Banco de dados de possíveis missões[cite: 1]
+const questPool = [
+    { text: '📦 Abra [X] pacotes', type: 'packs', rewardType: 'money', baseVal: 20, multiplier: 100, diff: 'Fácil' },
+    { text: '📦 Abra [X] pacotes', type: 'packs', rewardType: 'money', baseVal: 150, multiplier: 800, diff: 'Médio' },
+    { text: '📦 Abra [X] pacotes', type: 'packs', rewardType: 'boost', baseVal: 500, multiplier: 300, diff: 'Difícil' },
+    { text: '✨ Encontre [X] Lendárias', type: 'legendaries', rewardType: 'money', baseVal: 2, multiplier: 2000, diff: 'Fácil' },
+    { text: '✨ Encontre [X] Lendárias', type: 'legendaries', rewardType: 'money', baseVal: 10, multiplier: 8000, diff: 'Médio' },
+    { text: '🔥 Encontre [X] Mítica', type: 'mythics', rewardType: 'boost', baseVal: 1, multiplier: 600, diff: 'Difícil' },
+    { text: '💸 Venda [X] cartas', type: 'sold', rewardType: 'money', baseVal: 50, multiplier: 1500, diff: 'Fácil' },
+    { text: '💸 Venda [X] cartas', type: 'sold', rewardType: 'boost', baseVal: 300, multiplier: 120, diff: 'Médio' },
+    { text: '💸 Venda [X] cartas', type: 'sold', rewardType: 'boost', baseVal: 1000, multiplier: 600, diff: 'Difícil' },
+    { text: '💰 Gaste [X] Berries', type: 'spent', rewardType: 'money', baseVal: 5000, multiplier: 2500, diff: 'Fácil' },
+    { text: '💰 Gaste [X] Berries', type: 'spent', rewardType: 'boost', baseVal: 50000, multiplier: 180, diff: 'Médio' },
+    { text: '💰 Gaste [X] Berries', type: 'spent', rewardType: 'money', baseVal: 200000, multiplier: 100000, diff: 'Difícil' }
+];
+
+// Função para gerar missões aleatórias[cite: 1]
+function generateRandomQuests() {
+    quests = [];
+    let poolCopy = [...questPool];
+    // Sorteia 5 missões aleatórias sem repetição do banco
+    for(let i=0; i<5; i++) {
+        let idx = Math.floor(Math.random() * poolCopy.length);
+        let qTemplate = poolCopy.splice(idx, 1)[0];
+        
+        quests.push({
+            id: 'rq_' + i + '_' + Date.now(),
+            text: qTemplate.text.replace('[X]', qTemplate.baseVal),
+            type: qTemplate.type,
+            target: qTemplate.baseVal,
+            rewardType: qTemplate.rewardType,
+            rewardValue: qTemplate.multiplier,
+            rewardText: qTemplate.rewardType === 'money' ? `💰 ${qTemplate.multiplier.toLocaleString()} Berries` : `🚀 Boost (${qTemplate.multiplier/60} min)`,
+            diff: qTemplate.diff,
+            claimed: false
+        });
+    }
+}
+
+// Música
+let currentPlaylist = [261.63, 329.63, 392.00, 440.00];
+let musicEnabled = true;
+
+const values = { common: 10, uncommon: 15, rare: 30, epic: 115, legendary: 750, mythic: 7500, god: 50000 };
+
+const characters = [
+    // COMMON (18)
+    {name:"Usopp",rarity:"common"},{name:"Nami",rarity:"common"},{name:"Chopper",rarity:"common"},
+    {name:"Buggy",rarity:"common"},{name:"Morgan",rarity:"common"},{name:"Cabaji",rarity:"common"},
+    {name:"Mohji",rarity:"common"},{name:"Shu",rarity:"common"},{name:"Higuma",rarity:"common"},
+    {name:"Alvida",rarity:"common"},{name:"Helmeppo",rarity:"common"},{name:"Fullbody",rarity:"common"},{name:"Chew",rarity:"common"},
+    {name:"Gin",rarity:"common"},{name:"Kuro",rarity:"common"},{name:"Don Krieg",rarity:"common"},{name:"Johnny",rarity:"common"},{name:"Yosaku",rarity:"common"},
+    // UNCOMMON (18)
+    {name:"Koby",rarity:"uncommon"},{name:"Gaimon",rarity:"uncommon"},{name:"Hatchan",rarity:"uncommon"},
+    {name:"Mr. 9",rarity:"uncommon"},{name:"Miss Monday",rarity:"uncommon"},{name:"Pearl",rarity:"uncommon"},
+    {name:"Boodle",rarity:"uncommon"},{name:"Chouchou",rarity:"uncommon"},{name:"Kaya",rarity:"uncommon"},
+    {name:"Ninjin",rarity:"uncommon"},{name:"Piiman",rarity:"uncommon"},{name:"Tamanegi",rarity:"uncommon"},
+    {name:"Nojiko",rarity:"uncommon"},{name:"Genzo",rarity:"uncommon"},{name:"Zeff",rarity:"uncommon"},
+    {name:"Patty",rarity:"uncommon"},{name:"Carne",rarity:"uncommon"},{name:"Bell-mère",rarity:"uncommon"},
+    // RARE (18)
+    {name:"Zoro",rarity:"rare"},{name:"Sanji",rarity:"rare"},{name:"Robin",rarity:"rare"},
+    {name:"Franky",rarity:"rare"},{name:"Brook",rarity:"rare"},{name:"Jinbe",rarity:"rare"},
+    {name:"Smoker",rarity:"rare"},{name:"Tashigi",rarity:"rare"},{name:"Vivi",rarity:"rare"},{name:"Perona",rarity:"rare"},
+    {name:"Bepo",rarity:"rare"},{name:"Bon Clay",rarity:"rare"},{name:"Bartolomeo",rarity:"rare"},{name:"Cavendish",rarity:"rare"},
+    {name:"Carrot",rarity:"rare"},{name:"Paulie",rarity:"rare"},{name:"Kaku",rarity:"rare"},{name:"Wyper",rarity:"rare"},
+    // EPIC (18)
+    {name:"Ace",rarity:"epic"},{name:"Law",rarity:"epic"},{name:"Kid",rarity:"epic"},
+    {name:"Sabo",rarity:"epic"},{name:"Boa Hancock",rarity:"epic"},{name:"Marco",rarity:"epic"},
+    {name:"Katakuri",rarity:"epic"},{name:"Kuma",rarity:"epic"},{name:"Crocodile",rarity:"epic"},
+    {name:"Doflamingo",rarity:"epic"},{name:"Enel",rarity:"epic"},
+    {name:"Yamato",rarity:"epic"},{name:"King",rarity:"epic"},{name:"Queen",rarity:"epic"},{name:"Killer",rarity:"epic"},
+    {name:"Jack",rarity:"epic"},{name:"Cracker",rarity:"epic"},{name:"Smoothie",rarity:"epic"},
+    // LEGENDARY (20)
+    {name:"Kaido",rarity:"legendary"},{name:"Shanks",rarity:"legendary"},{name:"Whitebeard",rarity:"legendary"},
+    {name:"Mihawk",rarity:"legendary"},{name:"Big Mom",rarity:"legendary"},{name:"Akainu",rarity:"legendary"},
+    {name:"Aokiji",rarity:"legendary"},{name:"Kizaru",rarity:"legendary"},{name:"Garp",rarity:"legendary"},
+    {name:"Sengoku",rarity:"legendary"},{name:"Luffy",rarity:"legendary"},
+    {name:"Fujitora",rarity:"legendary"},{name:"Oden",rarity:"legendary"},{name:"Rayleigh",rarity:"legendary"},{name:"Blackbeard",rarity:"legendary"},
+    {name:"Green Bull",rarity:"legendary"},{name:"Sabot",rarity:"legendary"},{name:"Ben Beckman",rarity:"legendary"},{name:"Shiryu",rarity:"legendary"},{name:"Tsuru",rarity:"legendary"},
+    // MYTHIC (17)
+    {name:"Gol D. Roger",rarity:"mythic"},{name:"Joy Boy",rarity:"mythic"},{name:"Rocks D. Xebec",rarity:"mythic"},
+    {name:"Ryuma",rarity:"mythic"},{name:"Dragon",rarity:"mythic"},{name:"Imu",rarity:"mythic"},
+    {name:"Nika",rarity:"mythic"},{name:"Sogeking",rarity:"mythic"},{name:"Zunesha",rarity:"mythic"},
+    {name:"Ancient Robot",rarity:"mythic"},{name:"Gorosei Saturn",rarity:"mythic"},{name:"Shirahoshi (Poseidon)",rarity:"mythic"},
+    {name:"Gorosei Mars",rarity:"mythic"},{name:"Gorosei Warcury",rarity:"mythic"},{name:"Gorosei Nusjuro",rarity:"mythic"},{name:"Gorosei Ju Peter",rarity:"mythic"},{name:"Kong",rarity:"mythic"},
+    // GOD (2)
+    {name:"😇Diandra😇",rarity:"god"},{name:"😇Dinean😇",rarity:"god"}
+];
+
+const PACK_PRICE = 100;
+
+function openSettings() { playClick(); document.getElementById('settingsModal').style.display = 'block'; }
+function closeSettings() { playClick(); document.getElementById('settingsModal').style.display = 'none'; }
+function toggleMusicStatus() { musicEnabled = document.getElementById('toggleMusic').checked; playClick(); saveGame(); }
+
+function buyOrToggleAutoSpin() {
+    playClick();
+    if (!hasAutoSpin) {
+        if (money >= AUTO_SPIN_COST) { money -= AUTO_SPIN_COST; stats.spent += AUTO_SPIN_COST; hasAutoSpin = true; updateAutoSpinUI(); updateMoney(); saveGame(); } 
+        else { alert("Você precisa de 5.000 Berries!"); }
+    } else {
+        autoSpinActive = !autoSpinActive; updateAutoSpinUI();
+        if (autoSpinActive) startAutoSpinLoop(); else stopAutoSpinLoop();
+    }
+}
+
+function updateAutoSpinUI() {
+    const btn = document.getElementById("btnAutoSpin");
+    if (!hasAutoSpin) { btn.innerText = `🔄 Giro Automático (${AUTO_SPIN_COST})`; btn.classList.remove("auto-active"); }
+    else { btn.innerText = autoSpinActive ? "🔄 Auto Giro: LIGADO" : "🔄 Auto Giro: DESLIGADO"; if (autoSpinActive) btn.classList.add("auto-active"); else btn.classList.remove("auto-active"); }
+}
+
+function startAutoSpinLoop() {
+    if (autoSpinTimer) clearTimeout(autoSpinTimer);
+    const runLoop = async () => {
+        if (!autoSpinActive) return;
+        const amount = parseInt(document.getElementById("autoSpinAmount").value);
+        const cost = amount * PACK_PRICE;
+        
+        if (money >= cost) { 
+            // Espera a função de abrir terminar antes de agendar o próximo giro
+            await openMultiple(amount); 
+            
+            // Define o tempo de espera: se skip estiver ON, gira rápido. 
+            // Se skip estiver OFF e for 5 cartas, espera o tempo da animação (aprox 3.5s total)[cite: 1]
+            let nextInterval = 500; 
+            if (!skipAnimation) {
+                nextInterval = amount === 5 ? 500 : 500;
+            }
+            
+            autoSpinTimer = setTimeout(runLoop, nextInterval); 
+        }
+        else { 
+            autoSpinActive = false; 
+            stopAutoSpinLoop(); 
+            updateAutoSpinUI(); 
+        }
+    };
+    runLoop();
+}
+
+function stopAutoSpinLoop() { if (autoSpinTimer) { clearTimeout(autoSpinTimer); autoSpinTimer = null; } }
+
+function resetGame() {
+    if(money < currentResetPrice) { alert(`Precisa de ${currentResetPrice} Berries!`); return; }
+    if(confirm(`Resetar por ${currentResetPrice}? +5/s de ganho. As missões também vão resetar!`)) {
+        money = 0; 
+        inventory = {}; 
+        unlockedCards = new Set([...lockedIndexCards]); 
+        baseIncome += 5; 
+        incomeMultiplier = 1;
+        
+        boostEndTime = 0;
+        questResetEndTime = 0;
+        document.getElementById("boostDisplay").style.display = "none";
+        document.getElementById("moneyDisplay").classList.remove("boost-active");
+        let resetEl = document.getElementById("questResetDisplay");
+        if (resetEl) resetEl.style.display = "none";
+
+        currentResetPrice = Math.floor(currentResetPrice * 1.3);
+        hasAutoSpin = false; autoSpinActive = false; stopAutoSpinLoop(); updateAutoSpinUI();
+        
+        // Reseta as missões e gera novas
+        stats = { packs: 0, legendaries: 0, sold: 0, spent: 0, mythics: 0 };
+        generateRandomQuests();
+
+        updateMoney(); renderInventory(); renderIndex(); renderQuests(); saveGame();
+    }
+}
+
+function updateSkipStatus() {
+    const span = document.getElementById("skipStatus");
+    if(span) { span.innerText = skipAnimation ? "ON" : "OFF"; span.style.color = skipAnimation ? "#2ecc71" : "#ff4d4d"; }
+}
+
+function initAudio(){ if(!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); startBackgroundMusic(); startMusicRotation(); } }
+
+function startBackgroundMusic() {
+    let noteIndex = 0; 
+    function playNextNote() { 
+        if (!audioCtx) return; 
+        if (musicEnabled) {
+            let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); 
+            osc.frequency.setValueAtTime(currentPlaylist[noteIndex], audioCtx.currentTime); 
+            gain.gain.setValueAtTime(0, audioCtx.currentTime); 
+            gain.gain.linearRampToValueAtTime(0.15, audioCtx.currentTime + 0.5); 
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 3); 
+            osc.connect(gain); gain.connect(audioCtx.destination); 
+            osc.start(); osc.stop(audioCtx.currentTime + 3); 
+        }
+        noteIndex = (noteIndex + 1) % currentPlaylist.length; 
+        setTimeout(playNextNote, 2500); 
+    }
+    playNextNote();
+}
+
+function startMusicRotation() {
+    setInterval(() => { currentPlaylist = [ Math.random() * 350 + 150, Math.random() * 350 + 150, Math.random() * 350 + 150, Math.random() * 350 + 150 ]; }, 30000);
+}
+
+function beep(freq, time=0.2, type="sine", vol=1.0){ 
+    if(!audioCtx) return; 
+    let osc = audioCtx.createOscillator(); let gain = audioCtx.createGain(); 
+    osc.type = type; osc.frequency.value = freq; 
+    gain.gain.setValueAtTime(0, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(vol, audioCtx.currentTime + 0.02); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + time); 
+    osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + time); 
+}
+
+function soundPack(){ beep(520, 0.3, "sine", 0.9); }
+function soundLegendary(){ beep(880, 0.5, "triangle", 1.0); }
+function soundMythic(){ beep(120, 0.7, "sawtooth", 1.0); }
+function soundGod(){ beep(1500, 1.0, "sine", 1.0); beep(1000, 0.8, "triangle", 0.9); }
+function soundSell(){ beep(400, 0.2, "sine", 0.8); }
+function playClick(){ beep(350, 0.1, "sine", 0.7); }
+function soundQuestComplete(){ beep(600, 0.1, "sine", 0.8); setTimeout(() => beep(800, 0.3, "sine", 1), 100); }
+
+function saveGame() { 
+    localStorage.setItem('cardsPieceSave', JSON.stringify({ 
+        money, inventory, 
+        unlockedCards: Array.from(unlockedCards), 
+        lockedIndexCards: Array.from(lockedIndexCards), 
+        autoSell, skipAnimation, baseIncome, currentResetPrice, hasAutoSpin, musicEnabled,
+        stats, quests, boostEndTime, questResetEndTime
+    })); 
+}
+
+function loadGame() {
+    const saved = localStorage.getItem('cardsPieceSave');
+    if(saved) {
+        const data = JSON.parse(saved); 
+        money = data.money; inventory = data.inventory || {}; 
+        unlockedCards = new Set(data.unlockedCards || []); lockedIndexCards = new Set(data.lockedIndexCards || []); 
+        autoSell = data.autoSell || {common:false, uncommon:false, rare:false, epic:false, legendary:false, mythic:false}; 
+        skipAnimation = data.skipAnimation || false; 
+        baseIncome = data.baseIncome || 5; 
+        currentResetPrice = data.currentResetPrice || 500; 
+        hasAutoSpin = data.hasAutoSpin || false; 
+        musicEnabled = data.musicEnabled !== undefined ? data.musicEnabled : true;
+        boostEndTime = data.boostEndTime || 0;
+        questResetEndTime = data.questResetEndTime || 0;
+        if(data.stats) stats = data.stats;
+        if(data.quests && data.quests.length > 0) quests = data.quests; else generateRandomQuests();
+
+        document.getElementById('toggleMusic').checked = musicEnabled;
+        updateAutoSpinUI(); updateMoney(); renderInventory(); updateSkipStatus();
+        for(let r in autoSell) { if(document.getElementById('auto_'+r)) document.getElementById('auto_'+r).checked = autoSell[r]; }
+    } else {
+        generateRandomQuests();
+    }
+}
+
+function startGame() { 
+    initAudio(); if(audioCtx.state === 'suspended') audioCtx.resume(); loadGame(); 
+    
+    // Ticker Global (Roda a cada 1 segundo)
+    setInterval(() => { 
+        money += (baseIncome * incomeMultiplier); 
+        updateMoney(); 
+
+        let now = Date.now();
+        
+        // 1. Lógica do Boost de Tempo (Missões)
+        if (boostEndTime > now) {
+            let left = Math.ceil((boostEndTime - now) / 1000);
+            document.getElementById("boostDisplay").style.display = "inline-block";
+            document.getElementById("boostTimeLeft").innerText = left;
+            document.getElementById("moneyDisplay").classList.add("boost-active");
+            incomeMultiplier = 3; 
+        } else if (boostEndTime !== 0) {
+            boostEndTime = 0;
+            incomeMultiplier = 1;
+            document.getElementById("boostDisplay").style.display = "none";
+            document.getElementById("moneyDisplay").classList.remove("boost-active");
+            renderIndex(); 
+            saveGame();
+        }
+
+        // 2. Lógica do Timer de Reset das Missões[cite: 1]
+        if (questResetEndTime > now) {
+            let left = Math.ceil((questResetEndTime - now) / 1000);
+            let m = Math.floor(left / 60);
+            let s = left % 60;
+            let displayEl = document.getElementById("questResetDisplay");
+            if (displayEl) {
+                displayEl.style.display = "inline-block";
+                document.getElementById("questResetTimeLeft").innerText = `${m}m ${s}s`;
+            }
+        } else if (questResetEndTime !== 0 && questResetEndTime <= now) {
+            questResetEndTime = 0;
+            stats = { packs: 0, legendaries: 0, sold: 0, spent: 0, mythics: 0 };
+            generateRandomQuests(); // Gera novas missões aleatórias[cite: 1]
+            let displayEl = document.getElementById("questResetDisplay");
+            if (displayEl) displayEl.style.display = "none";
+            renderQuests();
+            saveGame();
+        }
+
+    }, 1000); 
+    
+    setInterval(saveGame, 30000); 
+    document.getElementById('startScreen').style.opacity = '0'; 
+    setTimeout(() => { 
+        document.getElementById('startScreen').style.display = 'none'; 
+        document.getElementById('gameNav').style.display = 'block'; 
+        document.getElementById('pageGame').classList.add('active'); 
+        gameStarted = true; 
+    }, 500); 
+}
+
+function showPage(pageName){ 
+    playClick(); 
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); 
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); 
+    
+    const moneyDisplay = document.getElementById('moneyDisplay');
+    
+    if(pageName === 'game'){ 
+        document.getElementById('pageGame').classList.add('active'); document.getElementById('btnGame').classList.add('active'); 
+        document.getElementById('pageGame').querySelector('h1').after(moneyDisplay);
+    } else if(pageName === 'quests') {
+        document.getElementById('pageQuests').classList.add('active'); document.getElementById('btnQuests').classList.add('active');
+        document.getElementById('pageQuests').querySelector('h1').after(moneyDisplay);
+        renderQuests();
+    } else { 
+        document.getElementById('pageIndex').classList.add('active'); document.getElementById('btnIndex').classList.add('active'); 
+        document.getElementById('pageIndex').querySelector('h1').after(moneyDisplay);
+        renderIndex(); 
+    } 
+}
+
+function calculateLuckMultiplier() {
+    let luckMultiplier = 0.75;
+    const rarities = ["common", "uncommon", "rare", "epic", "legendary", "mythic", "god"];
+    rarities.forEach(rar => {
+        let chars = characters.filter(c => c.rarity === rar);
+        if (chars.length > 0 && chars.every(c => unlockedCards.has(c.name))) { luckMultiplier *= 1.5; }
+    });
+    if (Date.now() < boostEndTime) {
+        luckMultiplier *= 2; 
+    }
+    return luckMultiplier;
+}
+
+function getRandomCard(){ 
+    let r = Math.random(); let luckMultiplier = calculateLuckMultiplier(); r = 1 - ((1 - r) / luckMultiplier);
+    if(r < 0.70) return getBy("common");       
+    if(r < 0.90) return getBy("uncommon");     
+    if(r < 0.97) return getBy("rare");         
+    if(r < 0.998) return getBy("epic");        
+    if(r < 0.9997) return getBy("legendary");  
+    if(r < 0.9999) return getBy("mythic");     
+    if(r < 0.99991) return getBy("god");       
+    return getBy("legendary");
+}
+
+function getBy(r){ let list = characters.filter(c => c.rarity === r); return list[Math.floor(Math.random() * list.length)]; }
+function toggleAuto(r){ autoSell[r] = !autoSell[r]; saveGame(); }
+function toggleSkip(){ skipAnimation = !skipAnimation; updateSkipStatus(); saveGame(); }
+
+async function openMultiple(times){
+    let totalCost = PACK_PRICE * times;
+    if(money < totalCost){ if(autoSpinActive) { autoSpinActive = false; stopAutoSpinLoop(); updateAutoSpinUI(); } alert("Sem berries!"); return; }
+    
+    money -= totalCost; 
+    stats.spent += totalCost; // MISSÃO: Contabiliza Berries gastos[cite: 1]
+    updateMoney();
+    stats.packs += times; // MISSÃO: Contabiliza pacotes
+    
+    let container = document.getElementById("cards"); container.innerHTML = "";
+    for(let p = 0; p < times; p++){
+        for(let i = 0; i < 5; i++){
+            // Aguarda o tempo de animação antes de processar a próxima carta (Deixa mais lento)
+            if(!skipAnimation) await new Promise(r => setTimeout(r, 150));
+            
+            let card = getRandomCard(); unlockedCards.add(card.name);
+            
+            if(card.rarity === "legendary") stats.legendaries++; // MISSÃO: Contabiliza lendárias
+            if(card.rarity === "mythic") stats.mythics++; // MISSÃO: Contabiliza míticas[cite: 1]
+            
+            if(autoSell[card.rarity]){ 
+                money += values[card.rarity]; 
+                stats.sold++; // MISSÃO: Contabiliza vendas
+                updateMoney(); 
+                let sold = document.createElement("div"); 
+                sold.className = `card sold ${card.rarity}`; 
+                sold.dataset.name = card.name; 
+                sold.dataset.rarity = `[${card.rarity.toUpperCase()}]`; 
+                sold.dataset.price = values[card.rarity]; 
+                container.appendChild(sold); 
+                // Mesmo se for auto-vendida, espera um pouco para o jogador ver
+                if(!skipAnimation) await new Promise(r => setTimeout(r, 150));
+                continue; 
+            }
+            
+            let key = card.name + "_" + card.rarity; if(!inventory[key]) inventory[key] = {name: card.name, rarity: card.rarity, count: 0}; inventory[key].count++;
+            let div = document.createElement("div"); div.className = "card"; div.innerHTML = `<div class="inner"><div class="front">?</div><div class="back ${card.rarity}"><h3>${card.name}</h3></div></div>`; container.appendChild(div);
+            
+            if(!skipAnimation) await new Promise(r => setTimeout(r, 150));
+            div.classList.add("flip");
+            
+            if(card.rarity === "legendary") { div.classList.add("legendary-glow"); soundLegendary(); }
+            if(card.rarity === "mythic") { div.classList.add("mythic-glow"); soundMythic(); const overlay = document.getElementById("mythicOverlay"); overlay.style.display = "flex"; setTimeout(() => overlay.style.display = "none", 1500); }
+            if(card.rarity === "god") { div.classList.add("god-glow"); soundGod(); const overlay = document.getElementById("godOverlay"); overlay.style.display = "flex"; setTimeout(() => overlay.style.display = "none", 2000); }
+        }
+    }
+    renderInventory(); saveGame();
+}
+
+function renderInventory(){
+    let inv = document.getElementById("inventory"); inv.innerHTML = "";
+    ["common","uncommon","rare","epic","legendary","mythic","god"].forEach(r => {
+        let group = Object.values(inventory).filter(c => c.rarity === r); if(group.length === 0) return;
+        let section = document.createElement("div"); 
+        section.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; gap:10px; margin:10px 0 5px 0;"><h4 style="margin:0;">${r.toUpperCase()}</h4><button style="background: #e74c3c; color: white; padding: 4px 8px; font-size: 11px; border: 1px solid #c0392b; border-radius: 4px; cursor: pointer;" onclick="sellAllByRarity('${r}')">Vender Todas</button></div>`;
+        let container = document.createElement("div"); container.className = "inventory-group";
+        group.forEach(card => {
+            let div = document.createElement("div"); div.className = "card flip"; div.innerHTML = `<div class="inner"><div class="back ${card.rarity}"><h3>${card.name}</h3><p>${card.count}x</p><p>💰 ${values[card.rarity]}</p><div style="margin-top:4px; display:flex; gap:3px; justify-content:center;"><button style="padding: 4px 6px; font-size: 10px;" onclick="sellCard('${card.name}', '${card.rarity}', 1)">Vender 1</button><button style="padding: 4px 6px; font-size: 10px;" onclick="sellCard('${card.name}', '${card.rarity}', 'max')">Max</button></div></div></div>`; container.appendChild(div);
+        });
+        section.appendChild(container); inv.appendChild(section);
+    });
+}
+
+function sellCard(name, rarity, amount){
+    let key = name + "_" + rarity; let card = inventory[key]; if(!card) return;
+    let sellAmount = (amount === "max") ? card.count : 1; 
+    money += values[rarity] * sellAmount; 
+    card.count -= sellAmount;
+    stats.sold += sellAmount; // MISSÃO: Contabiliza Venda
+    
+    if(card.count <= 0) delete inventory[key]; 
+    updateMoney(); renderInventory(); soundSell(); saveGame();
+}
+
+function sellAllByRarity(rarity) {
+    let group = Object.values(inventory).filter(c => c.rarity === rarity); if (group.length === 0) return;
+    let totalValue = 0; let totalCards = 0;
+    group.forEach(card => { totalValue += values[rarity] * card.count; totalCards += card.count; });
+    if (confirm(`Vender ${totalCards} cartas ${rarity.toUpperCase()} por 💰 ${totalValue}?`)) {
+        money += totalValue;
+        stats.sold += totalCards; // MISSÃO: Contabiliza Venda
+        for (let key in inventory) { if (inventory[key].rarity === rarity) delete inventory[key]; }
+        updateMoney(); renderInventory(); soundSell(); saveGame();
+    }
+}
+
+function updateMoney(){
+    document.getElementById("money").innerText = Math.floor(money).toLocaleString();
+    document.getElementById("incomeVal").innerText = (baseIncome * incomeMultiplier);
+    document.getElementById("resetCostVal").innerText = currentResetPrice.toLocaleString();
+}
+
+// Lógica Visual e de Renderização das Missões[cite: 1]
+function renderQuests() {
+    let container = document.getElementById("questsContainer");
+    if(!container) return;
+    container.innerHTML = "";
+    
+    quests.forEach(q => {
+        let progress = stats[q.type];
+        let isComplete = progress >= q.target;
+        let btnHtml = "";
+        
+        if (q.claimed) {
+            btnHtml = `<button disabled style="background: rgba(255,255,255,0.1); border: 1px solid gray; color: gray; padding: 10px 15px; border-radius: 8px;">Coletado ✅</button>`;
+        } else if (isComplete) {
+            btnHtml = `<button onclick="claimQuest('${q.id}')" style="background: #27ae60; color: white; padding: 10px 15px; border: 2px solid white; border-radius: 8px; font-weight: bold; cursor: pointer; box-shadow: 0 0 10px #27ae60; animation: pulse-green 1.5s infinite;">Resgatar 🎁</button>`;
+        } else {
+            let progressPct = Math.min((progress / q.target) * 100, 100);
+            btnHtml = `
+                <div style="text-align: right;">
+                    <span style="font-size: 14px; color: #ccc; font-weight:bold;">${Math.floor(Math.min(progress, q.target)).toLocaleString()} / ${q.target.toLocaleString()}</span>
+                    <div style="width: 100px; height: 8px; background: #333; border-radius: 5px; margin-top: 5px; border: 1px solid #555;">
+                        <div style="width: ${progressPct}%; height: 100%; background: #3498db; border-radius: 5px; transition: width 0.3s;"></div>
+                    </div>
+                </div>`;
+        }
+
+        let diffColor = q.diff === 'Fácil' ? '#2ecc71' : (q.diff === 'Médio' ? '#f1c40f' : '#e74c3c');
+
+        let div = document.createElement("div");
+        div.style.background = "rgba(0,0,0,0.6)";
+        div.style.padding = "15px";
+        div.style.borderRadius = "10px";
+        div.style.border = `2px solid ${q.claimed ? '#444' : (isComplete ? 'gold' : '#3498db')}`;
+        div.style.marginBottom = "12px";
+        div.style.display = "flex";
+        div.style.justifyContent = "space-between";
+        div.style.alignItems = "center";
+        div.style.transition = "0.3s";
+        
+        div.innerHTML = `
+            <div>
+                <span style="font-size: 10px; background: ${diffColor}; color: black; padding: 2px 6px; border-radius: 4px; font-weight: bold; text-transform: uppercase;">${q.diff}</span>
+                <h3 style="margin: 5px 0 5px 0; font-size: 16px; color: ${q.claimed ? '#aaa' : 'white'};">${q.text}</h3>
+                <p style="margin: 0; font-size: 13px; color: ${q.claimed ? '#888' : 'gold'}; font-weight: bold;">Recompensa: ${q.rewardText}</p>
+            </div>
+            <div>${btnHtml}</div>
+        `;
+        container.appendChild(div);
+    });
+}
+
+function claimQuest(id) {
+    let q = quests.find(x => x.id === id);
+    if (!q || q.claimed || stats[q.type] < q.target) return;
+    
+    soundQuestComplete();
+    q.claimed = true;
+    
+    if (q.rewardType === 'money') {
+        money += q.rewardValue;
+        updateMoney();
+        alert(`🎉 Recompensa resgatada: ${q.rewardText}!`);
+    } else if (q.rewardType === 'boost') {
+        activateBoost(q.rewardValue);
+    }
+
+    // Inicia o timer de 5 min se todas as missões foram resgatadas e o timer ainda não estiver rodando[cite: 1]
+    if (quests.every(quest => quest.claimed) && questResetEndTime === 0) {
+        questResetEndTime = Date.now() + (5 * 60 * 1000);
+    }
+    
+    renderQuests();
+    saveGame();
+}
+
+function activateBoost(seconds) {
+    incomeMultiplier = 2; 
+    if (boostEndTime > Date.now()) {
+        boostEndTime += seconds * 1000;
+    } else {
+        boostEndTime = Date.now() + (seconds * 1000);
+    }
+
+    updateMoney();
+    document.getElementById("moneyDisplay").classList.add("boost-active");
+    document.getElementById("boostDisplay").style.display = "inline-block";
+    
+    alert(`🚀 BOOST ATIVADO! Sorte dobrada e Ganhos 2x!`);
+    renderIndex(); 
+    saveGame();
+}
+
+function renderIndex(){
+    let container = document.getElementById("indexContainer"); container.innerHTML = "";
+    document.getElementById("unlockedCount").innerText = unlockedCards.size;
+    let luckDisplay = document.getElementById("luckDisplay");
+    if(luckDisplay) {
+        let luck = calculateLuckMultiplier(); luckDisplay.innerText = luck === 1 ? "1x (Complete raridades para aumentar!)" : luck.toFixed(2) + "x";
+    }
+    ["common","uncommon","rare","epic","legendary","mythic","god"].forEach(r => {
+        let title = document.createElement("h4"); title.innerText = r.toUpperCase(); container.appendChild(title);
+        let groupDiv = document.createElement("div"); groupDiv.className = "index-group";
+        characters.filter(c => c.rarity === r).forEach(char => {
+            let isUnlocked = unlockedCards.has(char.name); let isLocked = lockedIndexCards.has(char.name); let lockCost = values[char.rarity] * 30; 
+            let div = document.createElement("div"); div.className = `index-card ${char.rarity} ${isUnlocked ? '' : 'locked'}`; 
+            let htmlContent = `<span style="position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); width: 90%;"><b>${isUnlocked ? char.name : '???'}</b></span>`;
+            if(isUnlocked) {
+                if(isLocked) { htmlContent += `<div style="position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); width: 100%; font-size: 10px; color: gold; text-shadow: 1px 1px 2px #000;">🔒 Salvo</div>`; }
+                else { htmlContent += `<button onclick="lockIndexCard('${char.name}', ${lockCost})" style="position: absolute; bottom: 10px; left: 10%; width: 80%; font-size: 11px; padding: 8px 0; cursor: pointer; border-radius: 6px; border: none; background: gold; color: black; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.3); text-align: center;">Trancar ($${lockCost.toLocaleString()})</button>`; }
+            }
+            div.innerHTML = htmlContent; groupDiv.appendChild(div);
+        });
+        container.appendChild(groupDiv);
+    });
+}
+
+function lockIndexCard(name, cost) {
+    playClick(); if(money >= cost) { money -= cost; stats.spent += cost; lockedIndexCards.add(name); updateMoney(); renderIndex(); saveGame(); } else { alert("Você precisa de " + cost.toLocaleString() + " Berries!"); }
+}
+
+</script>
+</body>
+</html>
